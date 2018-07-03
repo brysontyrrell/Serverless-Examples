@@ -80,6 +80,7 @@ Resources:
       CodeUri: ./src/queue_processor
       Handler: queue_processor.lambda_handler
       Runtime: python3.6
+      Timeout: 30
       ReservedConcurrentExecutions: 10
       Events:
         QueueMessages:
