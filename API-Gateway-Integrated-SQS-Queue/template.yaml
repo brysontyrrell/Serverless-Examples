@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Create an API Gateway integrated with an SQS queue that is processed by a
+  Lambda function as messages are populated.
+
+Resources:
+
+  ApiQueue:
+    Type: AWS::SQS::Queue
+
+  QueueApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+      Policies:
+        - PolicyName: ApiQueuePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:SendMessage
+                Resource: !GetAtt ApiQueue.Arn
+
+  QueueApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: !Ref AWS::StackName
+        paths:
+          "/":
+            post:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+              x-amazon-apigateway-integration:
+                credentials: !GetAtt QueueApiGatewayRole.Arn
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:sqs:path//"
+                responses:
+                  default:
+                    statusCode: "200"
+                requestParameters:
+                  integration.request.header.Content-Type: "'application/x-www-form-urlencoded'"
+                requestTemplates:
+                  application/json: !Sub "Action=SendMessage##\n&QueueUrl=$util.urlEncode('${ApiQueue}')##\n\
+                    &MessageBody=$util.urlEncode($input.body)##\n"
+                passthroughBehavior: "never"
+                httpMethod: "POST"
+                type: "aws"
+        definitions:
+          Empty:
+            type: "object"
+            title: "Empty Schema"
+
+  QueueProcessor:
+    Type: AWS::Serverless::Function
+    Description: Processes messages from the SQS Queue.
+    Properties:
+      CodeUri: ./src/queue_processor
+      Handler: queue_processor.lambda_handler
+      Runtime: python3.6
+      Events:
+        QueueMessages:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ApiQueue.Arn
+            BatchSize: 10

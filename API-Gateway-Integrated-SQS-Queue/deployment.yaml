@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create an API Gateway integrated with an SQS queue that is processed
+  by a Lambda function as messages are populated.
+Resources:
+  ApiQueue:
+    Type: AWS::SQS::Queue
+  QueueApiGateway:
+    Properties:
+      DefinitionBody:
+        definitions:
+          Empty:
+            title: Empty Schema
+            type: object
+        info:
+          title:
+            Ref: AWS::StackName
+        paths:
+          /:
+            post:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                credentials:
+                  Fn::GetAtt:
+                  - QueueApiGatewayRole
+                  - Arn
+                httpMethod: POST
+                passthroughBehavior: never
+                requestParameters:
+                  integration.request.header.Content-Type: '''application/x-www-form-urlencoded'''
+                requestTemplates:
+                  application/json:
+                    Fn::Sub: 'Action=SendMessage##
+
+                      &QueueUrl=$util.urlEncode(''${ApiQueue}'')##
+
+                      &MessageBody=$util.urlEncode($input.body)##
+
+                      '
+                responses:
+                  default:
+                    statusCode: '200'
+                type: aws
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:sqs:path//
+        swagger: '2.0'
+      StageName: Prod
+    Type: AWS::Serverless::Api
+  QueueApiGatewayRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - sqs:ReceiveMessage
+            - sqs:SendMessage
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+              - ApiQueue
+              - Arn
+          Version: '2012-10-17'
+        PolicyName: ApiQueuePolicy
+    Type: AWS::IAM::Role
+  QueueProcessor:
+    Description: Processes messages from the SQS Queue.
+    Properties:
+      CodeUri: s3://jamfdeploytest/7303f5c2a726212edcc3478461e45308
+      Events:
+        QueueMessages:
+          Properties:
+            BatchSize: 10
+            Queue:
+              Fn::GetAtt:
+              - ApiQueue
+              - Arn
+          Type: SQS
+      Handler: queue_processor.lambda_handler
+      Runtime: python3.6
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31
