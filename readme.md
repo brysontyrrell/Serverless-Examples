@@ -18,7 +18,9 @@ Instead of allowing S3 to spawn as many Lambdas as it needs for an influx of fil
 S3 File Processing
 ------------------
 
-A basic application that will process file uploads to an S3 bucket. This app leverages the `Filter` option for S3 Events to only process uploaded JSON files and will ignore any other file type. Use filters to process different files using different dedicated Lambda functions.
+A basic application that will process file uploads to an S3 bucket. Using the embedded copy of `requests` within the `botocore` module, the Lambda sends the successfully parsed JSON to an external HTTP destination.
+
+This app leverages the `Filter` option for S3 Events to only process uploaded JSON files and will ignore any other file type. Use filters to process different files using different dedicated Lambda functions.
 
 
 MacAdmins 2018 Links
@@ -26,11 +28,11 @@ MacAdmins 2018 Links
 
 These are links shown during my presentation "Dive into Lambda: An Intro to Serverless for Admins" from the Penn State MacAdmins 2018 conference. They server as excellent resources for anyone beginning to develop applications using serverless resources.
 
-[AWS SAM (Serverless Application Model)]( https://github.com/awslabs/serverless-application-model/)
+- [AWS SAM (Serverless Application Model)](https://github.com/awslabs/serverless-application-model/)
 
-[CloudFormation Psuedo Parameters ](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html)
+- [CloudFormation Psuedo Parameters](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html)
 
-[Lambda Event Examples]( https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html)
+- [Lambda Event Examples](https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html)
 
-[X-Ray for Python ](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-python.html)
+- [X-Ray for Python](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-python.html)
 

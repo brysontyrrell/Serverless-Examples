@@ -2,16 +2,11 @@ import io
 import json
 import logging
 
-# from aws_xray_sdk.core import xray_recorder
-# from aws_xray_sdk.core import patch
 import boto3
 from botocore.vendored import requests
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-# xray_recorder.configure()
-# patch(['boto3', 'requests'])
 
 
 def get_file(bucket, key):
